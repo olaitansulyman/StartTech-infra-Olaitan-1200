@@ -118,5 +118,5 @@ variable "github_org" {
 variable "github_repo" {
   description = "GitHub repository name for OIDC"
   type        = string
-  default     = "StartTech-infra-Olaitan-ALT-SOE-025-1200"
+  default     = "StartTech-infra-Olaitan-1200"
 }
