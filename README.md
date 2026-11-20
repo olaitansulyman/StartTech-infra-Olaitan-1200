@@ -1,79 +1,111 @@
-# StartTech Infrastructure - CI/CD Pipeline
+# StartTech — AWS Infrastructure and CI/CD Portfolio Project
 
-## 🎯 Project Overview
+A hands-on DevOps portfolio project that brings together Terraform-managed AWS infrastructure, GitHub Actions automation, container builds, and basic application observability.
 
-Complete CI/CD pipeline infrastructure for StartTech's full-stack application using Terraform, GitHub Actions, and AWS services.
+> **Project status:** Learning/portfolio implementation. The repository contains infrastructure code, deployment scripts, workflows, and operational documentation. Do not assume that the stack is currently deployed or serving production traffic; deployment status must be verified independently.
 
-## 🏗️ Architecture
+## What this project demonstrates
 
-- **Frontend**: React → S3 + CloudFront
-- **Backend**: Golang → EC2 Auto Scaling + ALB
-- **Cache**: ElastiCache Redis
-- **Database**: MongoDB Atlas
-- **Infrastructure**: Terraform modules
-- **CI/CD**: GitHub Actions
+- **Infrastructure as Code:** Terraform modules for AWS networking, compute, storage/CDN, monitoring, and GitHub Actions OIDC.
+- **AWS networking and compute:** VPC, public/private subnets, security groups, an Application Load Balancer, and an EC2 Auto Scaling Group.
+- **Frontend delivery:** React build output published to Amazon S3 and distributed through CloudFront.
+- **Backend delivery:** Go API container build and Amazon ECR image publishing, with an Auto Scaling refresh workflow.
+- **Data/cache integration:** MongoDB Atlas and Amazon ElastiCache configuration.
+- **Observability:** CloudWatch log group, dashboard, alarm definitions, and Log Insights queries.
+- **Automation and operations:** GitHub Actions workflows, deployment/health-check/rollback scripts, and a runbook.
 
-## 📋 Prerequisites
+## Architecture at a glance
 
-- AWS CLI configured
-- Terraform v1.0+
+```text
+                       GitHub Actions
+                      /      |       \
+              Terraform   Frontend   Backend
+                 |          |          |
+                 v          v          v
+             AWS VPC      S3 + CDN    ECR image
+                 |                     |
+              ALB + ASG <---------------+
+                 |
+              Go API
+                 |
+         MongoDB Atlas / Redis
+
+          CloudWatch logs, metrics,
+          dashboards and alarms
+```
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the detailed design.
+
+## Repository layout
+
+```text
+.
+├── .github/workflows/       # Infrastructure, frontend and backend workflows
+├── backend/                 # Go API and Dockerfile
+├── frontend/                # React application
+├── terraform/               # Root configuration and reusable modules
+├── monitoring/              # CloudWatch dashboard, alarms and queries
+├── scripts/                 # Deploy, health-check, test and rollback helpers
+└── docs/                    # Architecture, deployment, OIDC, testing and runbook
+```
+
+## Prerequisites
+
+- AWS account and CLI
+- Terraform version supported by the root configuration
+- Docker
+- Go and Node.js versions compatible with the application manifests
 - GitHub repository access
-- MongoDB Atlas account
+- MongoDB Atlas account and API credentials, if using the Atlas resources
 
-## 🚀 Quick Start
+## Safe local workflow
 
-1. **Configure AWS credentials:**
-   ```bash
-   aws configure
-   ```
+1. Review the architecture, variables, IAM policies, and estimated AWS costs before provisioning.
+2. Copy the example variables file and provide your own values locally:
 
-2. **Initialize Terraform:**
    ```bash
    cd terraform
-   terraform init
-   terraform plan
-   terraform apply
+   cp terraform.tfvars.example terraform.tfvars
    ```
 
-3. **Deploy via GitHub Actions:**
-   - Push to main branch triggers infrastructure deployment
-   - Application repositories trigger app deployments
+3. Never commit `terraform.tfvars`, credentials, private keys, Terraform state, plan files, or generated outputs.
+4. Initialize and validate:
 
-## 📁 Repository Structure
+   ```bash
+   terraform init
+   terraform fmt -check -recursive
+   terraform validate
+   terraform plan
+   ```
 
-```
-starttech-infra/
-├── .github/workflows/     # CI/CD pipelines
-├── terraform/            # Infrastructure as Code
-├── scripts/             # Deployment scripts
-├── monitoring/          # CloudWatch configs
-└── docs/               # Documentation
-```
+5. Review the complete plan and expected charges before applying. Run `terraform apply` only in an account you control and only after confirming the plan.
+6. Use the scripts and [docs/RUNBOOK.md](docs/RUNBOOK.md) to verify application health and understand rollback steps.
+7. Destroy lab resources when finished, after reviewing the destroy plan.
 
-## 🔧 Infrastructure Components
+## CI/CD and AWS authentication
 
-- **Networking**: VPC, subnets, security groups
-- **Compute**: EC2 Auto Scaling Group, ALB
-- **Storage**: S3 bucket for frontend
-- **CDN**: CloudFront distribution
-- **Cache**: ElastiCache Redis cluster
-- **Monitoring**: CloudWatch logs and metrics
-- **Security**: IAM roles and policies
+The repository includes separate GitHub Actions workflows for infrastructure, frontend, and backend. AWS authentication is designed around GitHub OIDC rather than long-lived AWS access keys.
 
-## 📊 Monitoring
+The infrastructure workflow runs formatting, initialization, validation, and planning on pull requests and pushes to `main`. It deliberately does not apply infrastructure. Review the plan and run `terraform apply` manually from a trusted workstation only after confirming the resources and costs.
 
-- CloudWatch Logs for centralized logging
-- Application metrics and alarms
-- Health check endpoints
-- Performance monitoring
+Read [docs/GITHUB-ACTIONS-OIDC.md](docs/GITHUB-ACTIONS-OIDC.md) before configuring AWS trust. Configure only the required GitHub Actions secrets and use a narrowly scoped IAM role. The current Terraform OIDC role policy still needs a full least-privilege review before production use.
 
-## 🔒 Security
+## Observability and operations
 
-- IAM least-privilege policies
-- Security group restrictions
-- Secrets management
-- Vulnerability scanning
+- CloudWatch dashboard definition: `monitoring/cloudwatch-dashboard.json`
+- Alarm definitions: `monitoring/alarm-definitions.json`
+- Log Insights examples: `monitoring/log-insights-queries.txt`
+- Operational procedures: [docs/RUNBOOK.md](docs/RUNBOOK.md)
+- Validation guidance: [docs/TESTING-GUIDE.md](docs/TESTING-GUIDE.md)
 
-## 🚨 Operations
+## Security and cost notes
 
-See `RUNBOOK.md` for operational procedures and troubleshooting.
+- Terraform state can contain sensitive values. Use a private, encrypted, versioned remote backend with state locking.
+- Use GitHub OIDC and short-lived credentials; do not store AWS access keys in repository files.
+- Review IAM policies for least privilege. The current OIDC role policy is broad and is not production-hardened.
+- Keep application secrets in a managed secret store and out of source control.
+- NAT Gateways, load balancers, EC2 Auto Scaling, ElastiCache, and CloudFront can incur charges. Review costs and destroy lab resources when they are no longer needed.
+
+## Learning outcomes
+
+This project is intended to demonstrate practical familiarity with Terraform structure, AWS networking and compute, CI/CD workflow design, container image delivery, OIDC-based authentication, CloudWatch observability, and operational documentation. It is a portfolio project, not a claim of several years of production SRE/DevOps operations.

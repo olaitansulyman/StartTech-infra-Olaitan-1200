@@ -1,81 +1,61 @@
-# GitHub Actions OIDC Setup Guide
+# GitHub Actions OIDC Setup
 
-This guide explains how to set up GitHub Actions with AWS OIDC for secure, keyless authentication.
+This repository is `olaitansulyman/StartTech-infra-Olaitan-1200`. The Terraform module under `terraform/modules/github-oidc/` creates an AWS OIDC provider and an IAM role for GitHub Actions.
 
-## Prerequisites
+## Before configuring OIDC
 
-- AWS account with appropriate permissions
-- GitHub repository with admin access
-- Terraform installed locally
+1. Review the role trust policy and IAM permissions in `terraform/modules/github-oidc/main.tf`.
+2. The current role policy grants broad service permissions with wildcard resources. It is suitable only for a controlled learning environment after review, not for production workloads. Replace it with narrowly scoped permissions before production use.
+3. Protect the `main` branch and require review before merging infrastructure changes.
+4. Configure the S3 state bucket with encryption, versioning, public-access blocking, and restricted access; configure the DynamoDB lock table.
 
-## Automatic Setup via Terraform
+## Repository identity
 
-The `terraform/modules/github-oidc/` module creates:
-- **OIDC Provider**: Connects GitHub to your AWS account
-- **IAM Role**: Allows GitHub Actions to assume a role with specific permissions
-- **Trust Policy**: Restricts access to your specific repository
-
-### Variables Required
-
-Add these to your `terraform.tfvars`:
+Use these Terraform variable values:
 
 ```hcl
-github_org  = "olaitansulyman"    # Your GitHub org/username
-github_repo = "StartTech-infra-Olaitan-ALT-SOE-025-1200"  # Your infra repo name
+github_org  = "olaitansulyman"
+github_repo = "StartTech-infra-Olaitan-1200"
 ```
 
-### Deploy
+The OIDC trust condition should be limited to the intended repository and branch. Avoid a wildcard subject that permits any branch, tag, or environment to assume the deployment role.
 
-```bash
-cd terraform
-terraform plan
-terraform apply
-```
+## GitHub Actions secrets
 
-The Terraform output will show the IAM role ARN.
+Configure the following repository secrets only if the corresponding workflow requires them:
 
-## GitHub Secrets Configuration
+- `AWS_ACCOUNT_ID` — AWS account ID used to construct the role ARN
+- `TFSTATE_BUCKET` — private S3 bucket used for Terraform remote state
+- `MONGODB_ATLAS_PUBLIC_KEY`
+- `MONGODB_ATLAS_PRIVATE_KEY`
+- `MONGODB_ATLAS_ORG_ID`
+- `MONGODB_ATLAS_PASSWORD`
+- `ASG_NAME` — Auto Scaling Group target for backend deployment
+- `FRONTEND_S3_BUCKET` — frontend deployment bucket
+- `CLOUDFRONT_DISTRIBUTION_ID` — CloudFront distribution used by the frontend workflow
 
-Set these secrets in your GitHub repository (Settings → Secrets and variables → Actions):
+Do not add AWS access key ID/secret access key pairs. The intended authentication mechanism is OIDC and short-lived AWS credentials.
 
-1. `AWS_ACCOUNT_ID`: Your AWS account ID (12 digits)
-2. `TFSTATE_BUCKET`: Name of your S3 bucket for Terraform state
-3. `FRONTEND_S3_BUCKET`: S3 bucket for frontend deployment
-4. `CLOUDFRONT_DISTRIBUTION_ID`: CloudFront distribution ID
-5. `ASG_NAME`: Auto Scaling Group name
+## Workflow behavior
 
-## How It Works
+- Infrastructure validation and planning run on pull requests and pushes to `main`.
+- The infrastructure workflow runs validation and planning only; it does not apply resources. Apply manually from a trusted workstation after reviewing the plan.
+- Frontend/backend deployment workflows should be restricted to `main` and should not deploy from arbitrary branches.
 
-1. **GitHub Actions requests token** from GitHub OIDC provider
-2. **Token is passed to AWS STS** via `aws-actions/configure-aws-credentials@v2`
-3. **AWS validates token** against the OIDC provider configuration
-4. **STS returns temporary credentials** (valid for ~1 hour)
-5. **GitHub Actions uses credentials** to deploy infrastructure and applications
+## How OIDC works
 
-## Security Benefits
+1. A GitHub Actions job requests an OIDC token.
+2. The AWS credentials action exchanges the token with AWS STS.
+3. AWS validates the token's audience and subject against the IAM role trust policy.
+4. AWS returns temporary credentials for the role session.
+5. The workflow uses those temporary credentials for the permitted actions.
 
-✅ No long-lived AWS access keys stored as secrets  
-✅ Short-lived credentials (~1 hour expiration)  
-✅ Role-based access control (least privilege)  
-✅ Audit trail via CloudTrail logs  
-✅ Credential rotation automatic  
+## Production hardening checklist
 
-## Troubleshooting
-
-**Error: "Not authorized to perform: sts:AssumeRoleWithWebIdentity"**
-- Check that the OIDC provider thumbprint is correct
-- Verify the trust policy in the IAM role
-- Ensure GitHub repo matches `repo:org/repo:*` in the trust policy
-
-**Error: "The role defined for the session does not have permission..."**
-- Check IAM role policy has required permissions
-- Add missing service permissions to the policy
-
-## Additional Security Considerations
-
-For production:
-1. Narrow IAM role permissions (remove `"*"` resource)
-2. Add resource-specific ARNs to the policy
-3. Enable MFA delete on S3 bucket containing Terraform state
-4. Enable S3 bucket versioning for state
-5. Add DynamoDB lock table encryption
+- [ ] Restrict the OIDC subject to the exact repository and protected branch.
+- [ ] Replace wildcard IAM actions/resources with least-privilege permissions.
+- [ ] Use a protected GitHub environment with required reviewers for infrastructure apply.
+- [ ] Restrict the state bucket and enable versioning/encryption.
+- [ ] Review workflow permissions and pin third-party actions to immutable commit SHAs.
+- [ ] Scan dependencies and container images; fail builds on defined security thresholds.
+- [ ] Confirm Terraform state and plan artifacts cannot expose secrets.
