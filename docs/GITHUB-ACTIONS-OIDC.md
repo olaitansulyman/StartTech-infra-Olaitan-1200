@@ -39,7 +39,7 @@ Do not add AWS access key ID/secret access key pairs. The intended authenticatio
 ## Workflow behavior
 
 - Infrastructure validation and planning run on pull requests and pushes to `main`.
-- Infrastructure apply is available only through manual workflow dispatch on `main`, with the `apply` input explicitly set to true.
+- The infrastructure workflow runs validation and planning only; it does not apply resources. Apply manually from a trusted workstation after reviewing the plan.
 - Frontend/backend deployment workflows should be restricted to `main` and should not deploy from arbitrary branches.
 
 ## How OIDC works
