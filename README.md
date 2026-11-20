@@ -86,7 +86,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the detailed design.
 
 The repository includes separate GitHub Actions workflows for infrastructure, frontend, and backend. AWS authentication is designed around GitHub OIDC rather than long-lived AWS access keys.
 
-The infrastructure workflow is intended to run formatting, initialization, validation, and planning automatically. **Applying infrastructure should be an explicit, reviewed action**, not an automatic side effect of every push.
+The infrastructure workflow runs formatting, initialization, validation, and planning on pull requests and pushes to `main`. It deliberately does not apply infrastructure. Review the plan and run `terraform apply` manually from a trusted workstation only after confirming the resources and costs.
 
 Read [docs/GITHUB-ACTIONS-OIDC.md](docs/GITHUB-ACTIONS-OIDC.md) before configuring AWS trust. Configure only the required GitHub Actions secrets and use a narrowly scoped IAM role. The current Terraform OIDC role policy still needs a full least-privilege review before production use.
 
