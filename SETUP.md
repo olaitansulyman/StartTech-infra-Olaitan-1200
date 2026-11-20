@@ -66,7 +66,7 @@ The workflows live in `.github/workflows/`. Follow [GITHUB-ACTIONS-OIDC.md](docs
 
 Do not create an IAM user with broad administrator permissions or store long-lived AWS access keys as GitHub secrets. The current Terraform-created OIDC role policy is intentionally called out for a least-privilege review before production use.
 
-The infrastructure workflow should validate and plan on code changes. Applying infrastructure must be an explicit manual action on the protected `main` branch after review. Configure GitHub branch protection and required reviewers in repository settings.
+The infrastructure workflow validates and plans on code changes but does not apply infrastructure. Review the plan in GitHub Actions, then run `terraform apply` manually from a trusted workstation only after checking the resources and costs. Configure GitHub branch protection and required reviewers in repository settings.
 
 ## 6. Application workflows
 
