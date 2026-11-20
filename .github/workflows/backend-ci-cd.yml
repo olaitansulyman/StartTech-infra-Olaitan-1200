@@ -2,12 +2,14 @@ name: Backend CI/CD
 
 on:
   push:
+    branches: [main]
     paths:
       - 'backend/**'
   workflow_dispatch: {}
 
 jobs:
   build-and-deploy:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -17,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: '1.20'
       - name: Run tests
@@ -28,13 +30,13 @@ jobs:
         run: |
           cd backend
           go install github.com/securego/gosec/v2/cmd/gosec@latest
-          gosec ./... || true
+          gosec ./...
       - name: Build Docker image
         run: |
           cd backend
           docker build -t starttech-backend:${{ github.sha }} -t starttech-backend:latest .
       - name: Scan Docker image with Trivy
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: starttech-backend:latest
           format: sarif
@@ -46,7 +48,7 @@ jobs:
         with:
           sarif_file: trivy-results.sarif
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/starttech-github-actions-role
           aws-region: ${{ env.AWS_REGION }}
