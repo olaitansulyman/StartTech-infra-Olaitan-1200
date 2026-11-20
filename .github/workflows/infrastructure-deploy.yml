@@ -10,13 +10,6 @@ on:
     paths:
       - "terraform/**"
       - ".github/workflows/infrastructure-deploy.yml"
-  workflow_dispatch:
-    inputs:
-      apply:
-        description: "Apply the reviewed Terraform plan (main branch only)"
-        required: true
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -65,12 +58,5 @@ jobs:
           TF_VAR_mongodb_atlas_password: ${{ secrets.MONGODB_ATLAS_PASSWORD }}
         run: terraform plan -input=false -no-color
 
-      - name: Apply reviewed infrastructure
-        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.apply
-        working-directory: terraform
-        env:
-          TF_VAR_mongodb_atlas_public_key: ${{ secrets.MONGODB_ATLAS_PUBLIC_KEY }}
-          TF_VAR_mongodb_atlas_private_key: ${{ secrets.MONGODB_ATLAS_PRIVATE_KEY }}
-          TF_VAR_mongodb_atlas_org_id: ${{ secrets.MONGODB_ATLAS_ORG_ID }}
-          TF_VAR_mongodb_atlas_password: ${{ secrets.MONGODB_ATLAS_PASSWORD }}
-        run: terraform apply -input=false -auto-approve
+# This workflow deliberately does not apply infrastructure.
+# Review the plan and run terraform apply manually from a trusted workstation.
